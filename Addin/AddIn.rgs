@@ -1,0 +1,26 @@
+HKCR
+{
+	JumpToShapeAddin.Connect.1 = s 'Connect Class'
+	{
+		CLSID = s '{036C736A-06DA-4077-A0E2-5697ABF9DF40}'
+	}
+	JumpToShapeAddin.Connect = s 'Connect Class'
+	{
+		CLSID = s '{036C736A-06DA-4077-A0E2-5697ABF9DF40}'
+		CurVer = s 'JumpToShapeAddin.Connect.1'
+	}
+	NoRemove CLSID
+	{
+		ForceRemove '{036C736A-06DA-4077-A0E2-5697ABF9DF40}' = s 'Connect Class'
+		{
+			ProgID = s 'JumpToShapeAddin.Connect.1'
+			VersionIndependentProgID = s 'JumpToShapeAddin.Connect'
+			ForceRemove 'Programmable'
+			InprocServer32 = s '%MODULE%'
+			{
+				val ThreadingModel = s 'Apartment'
+			}
+			'TypeLib' = s '{6299BB77-B361-4a55-90D3-DEC687F30CD7}'
+		}
+	}
+}

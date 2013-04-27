@@ -1,0 +1,50 @@
+// AddIn.idl : IDL source for AddIn
+//
+
+// This file will be processed by the MIDL tool to
+// produce the type library (AddIn.tlb) and marshalling code.
+
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+	uuid(6299BB77-B361-4a55-90D3-DEC687F30CD7),
+	version(1.0),
+	helpstring("JumpToShapeAddin 1.0 Type Library")
+]
+library AddinLib
+{
+	importlib("stdole2.tlb");
+
+	[
+		object,
+		uuid(102901F7-D05A-45cc-96F7-457E5EF23527),
+		dual,
+		pointer_default(unique)
+	]
+	interface ICallbackInterface : IDispatch
+	{
+		[id(1)] 
+		HRESULT OnRibbonButtonClicked([in] IDispatch * pControl);
+
+		[id(2)]
+		HRESULT IsRibbonButtonVisible([in] IDispatch * pControl, [out, retval] VARIANT_BOOL* pResult);
+
+		[id(3)]
+		HRESULT IsRibbonButtonEnabled([in] IDispatch * pControl, [out, retval] VARIANT_BOOL* pResult);
+
+		[id(7)]
+		HRESULT GetRibbonLabel([in] IDispatch*pControl, [out, retval] BSTR *pbstrLabel);
+
+		[id(10)]
+		HRESULT OnRibbonLoad([in] IDispatch* disp);
+	};
+	[
+		uuid(036C736A-06DA-4077-A0E2-5697ABF9DF40),
+		helpstring("Connect Class")
+	]
+	coclass Connect
+	{
+		[default] interface ICallbackInterface;
+	};
+};

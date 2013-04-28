@@ -76,6 +76,5 @@ END_OBJECT_MAP()
 // DLL Entry Point
 extern "C" BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
 {
-	hInstance;
 	return _Module.DllMain(hInstance, dwReason, lpReserved, ObjectMap, &LIBID_AddinLib); 
 }

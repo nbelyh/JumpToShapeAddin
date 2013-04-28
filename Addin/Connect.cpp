@@ -57,17 +57,22 @@ struct CVisioConnect::Impl
 
 	int GetAppLanguage()
 	{
-		IDispatchPtr disp_language_settings;
-		if (m_app->get_LanguageSettings(&disp_language_settings))
+		long app_language = 0;
+		if (FAILED(m_app->get_Language(&app_language)))
 			return DEFAULT_LANGUAGE;
 
-		LanguageSettingsPtr language_settings;
-		if (FAILED(disp_language_settings->QueryInterface(__uuidof(LanguageSettings), (void**)&language_settings)))
-			return DEFAULT_LANGUAGE;
-
-		int app_language = 0;
-		if (FAILED(language_settings->get_LanguageID(msoLanguageIDUI, &app_language)))
-			return DEFAULT_LANGUAGE;
+		CComVariant v_disp_language_settings;
+		CComDispatchDriver disp = m_app;
+		if (SUCCEEDED(disp.GetPropertyByName(L"LanguageSettings", &v_disp_language_settings)))
+		{
+			LanguageSettingsPtr language_settings;
+			if (SUCCEEDED(V_DISPATCH(&v_disp_language_settings)->QueryInterface(__uuidof(LanguageSettings), (void**)&language_settings)))
+			{
+				int ui_language = app_language;
+				if (SUCCEEDED(language_settings->get_LanguageID(msoLanguageIDUI, &ui_language)))
+					app_language = ui_language;
+			}
+		}
 
 		switch (app_language)
 		{
@@ -330,8 +335,6 @@ struct CVisioConnect::Impl
 		pApplication->QueryInterface(__uuidof(IDispatch), (LPVOID*)&m_app);
 		pAddInInst->QueryInterface(__uuidof(IDispatch), (LPVOID*)&m_addin);
 
-		m_language = GetAppLanguage();
-
 		if (GetVisioVersion(m_app) < 14)
 		{
 			LanguageLock lock(GetAppLanguage());
@@ -405,8 +408,6 @@ struct CVisioConnect::Impl
 	Visio::IVApplicationPtr m_app;
 	IDispatchPtr m_addin;
 	Office::IRibbonUIPtr m_ribbon;
-
-	DWORD m_language;
 
 	CAtlArray<ClickEventRedirector*> m_buttons;
 };

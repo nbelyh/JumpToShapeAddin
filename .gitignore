@@ -7,3 +7,5 @@ obj
 *_i.c
 *_i.h
 *.sln.cache
+*.suo
+*.ncb

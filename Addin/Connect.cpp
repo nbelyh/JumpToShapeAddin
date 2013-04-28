@@ -125,7 +125,7 @@ struct CVisioConnect::Impl
 
 	static CString LoadTextFile(UINT resource_id)
 	{
-		HMODULE hResources = AfxGetResourceHandle();
+		HMODULE hResources = _Module.GetResourceInstance();
 
 		HRSRC rc = ::FindResource(
 			hResources, MAKEINTRESOURCE(resource_id), L"TEXTFILE");
@@ -174,20 +174,20 @@ struct CVisioConnect::Impl
 		m_buttons.Add(new ClickEventRedirector(item));
 	}
 
-	void FillMenuItems(long position, Office::CommandBarControlsPtr menu_items, CMenu* popup_menu)
+	void FillMenuItems(long position, Office::CommandBarControlsPtr menu_items, HMENU popup_menu)
 	{
 		// For each items in the menu,
 		bool begin_group = false;
-		for (unsigned i = 0; i < popup_menu->GetMenuItemCount(); ++i)
+		for (int i = 0; i < GetMenuItemCount(popup_menu); ++i)
 		{
-			CMenu* sub_menu = popup_menu->GetSubMenu(i);
+			HMENU sub_menu = GetSubMenu(popup_menu, i);
 
 			// set item caption
-			CString item_caption;
-			popup_menu->GetMenuString(i, item_caption, MF_BYPOSITION);
+			WCHAR item_caption[1024] = L"";
+			GetMenuString(popup_menu, i, item_caption, 1024, MF_BYPOSITION);
 
 			// if this item is actually a separator then process next item
-			if (item_caption.IsEmpty())
+			if (lstrlen(item_caption) == 0)
 			{
 				begin_group = true;
 				continue;
@@ -207,7 +207,7 @@ struct CVisioConnect::Impl
 				++position;
 
 			// obtain command id from menu
-			UINT command_id = popup_menu->GetMenuItemID(i);
+			UINT command_id = GetMenuItemID(popup_menu, i);
 
 			// normal command; set up visio menu item
 			InitializeItem(menu_item_obj, command_id);
@@ -234,10 +234,9 @@ struct CVisioConnect::Impl
 
 	void FillMenu(long position, Office::CommandBarControlsPtr cbs, UINT menu_id)
 	{
-		CMenu menu;
-		menu.LoadMenu(menu_id);
+		HMENU menu = LoadMenu(_Module.GetResourceInstance(), MAKEINTRESOURCE(menu_id));
 
-		FillMenuItems(position, cbs, menu.GetSubMenu(0));
+		FillMenuItems(position, cbs, GetSubMenu(menu, 0));
 	}
 
 	void CreateCommandBarsMenu(Visio::IVApplicationPtr app)
@@ -412,9 +411,9 @@ struct CVisioConnect::Impl
 	CAtlArray<ClickEventRedirector*> m_buttons;
 };
 
-static void LogError(_com_error& e)
+static void LogError(_com_error)
 {
-	UNUSED_ALWAYS(e);
+	// UNUSED_ALWAYS(e);
 }
 
 // the event handler itself. 
@@ -422,8 +421,6 @@ static void LogError(_com_error& e)
 void __stdcall ClickEventRedirector::OnClick(IDispatch* pButton, VARIANT_BOOL* pCancel)
 {
 	// Just in case. Visio seem to call this from some odd thread, without this all crashes down.
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	try
 	{
 		Office::_CommandBarButtonPtr button;
@@ -443,8 +440,6 @@ void __stdcall ClickEventRedirector::OnClick(IDispatch* pButton, VARIANT_BOOL* p
 // CConnect
 STDMETHODIMP CVisioConnect::OnConnection(IDispatch *pApplication, ext_ConnectMode, IDispatch *pAddInInst, SAFEARRAY ** custom)
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	try
 	{
 		m_impl->Create(pApplication, pAddInInst);
@@ -459,8 +454,6 @@ STDMETHODIMP CVisioConnect::OnConnection(IDispatch *pApplication, ext_ConnectMod
 
 STDMETHODIMP CVisioConnect::OnDisconnection(ext_DisconnectMode /*RemoveMode*/, SAFEARRAY ** /*custom*/ )
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	try
 	{
 		m_impl->Destroy();
@@ -475,29 +468,21 @@ STDMETHODIMP CVisioConnect::OnDisconnection(ext_DisconnectMode /*RemoveMode*/, S
 
 STDMETHODIMP CVisioConnect::OnAddInsUpdate (SAFEARRAY ** /*custom*/ )
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	return S_OK;
 }
 
 STDMETHODIMP CVisioConnect::OnStartupComplete (SAFEARRAY ** /*custom*/ )
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	return S_OK;
 }
 
 STDMETHODIMP CVisioConnect::OnBeginShutdown (SAFEARRAY ** /*custom*/ )
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	return S_OK;
 }
 
 STDMETHODIMP CVisioConnect::GetCustomUI(BSTR RibbonID, BSTR * RibbonString)
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	try
 	{
 		*RibbonString = Impl::LoadTextFile(IDR_RIBBON).AllocSysString();
@@ -512,8 +497,6 @@ STDMETHODIMP CVisioConnect::GetCustomUI(BSTR RibbonID, BSTR * RibbonString)
 
 STDMETHODIMP CVisioConnect::OnRibbonButtonClicked (IDispatch * pControl)
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	try
 	{
 		m_impl->OnRibbonButtonClicked(pControl);
@@ -529,26 +512,18 @@ STDMETHODIMP CVisioConnect::OnRibbonButtonClicked (IDispatch * pControl)
 
 STDMETHODIMP CVisioConnect::IsRibbonButtonVisible(IDispatch * pControl, VARIANT_BOOL* pResult)
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	*pResult = m_impl->IsRibbonButtonVisible(pControl);
-
 	return S_OK;
 }
 
 STDMETHODIMP CVisioConnect::IsRibbonButtonEnabled(IDispatch * pControl, VARIANT_BOOL* pResult)
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	*pResult = VARIANT_TRUE;
-
 	return S_OK;
 }
 
 STDMETHODIMP CVisioConnect::OnRibbonLoad(IDispatch* disp)
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	try
 	{
 		m_impl->SetupRibbon(disp);
@@ -563,8 +538,6 @@ STDMETHODIMP CVisioConnect::OnRibbonLoad(IDispatch* disp)
 
 STDMETHODIMP CVisioConnect::GetRibbonLabel(IDispatch* pControl, BSTR *pbstrLabel)
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	try
 	{
 		*pbstrLabel = m_impl->GetRibbonLabel(pControl).AllocSysString();

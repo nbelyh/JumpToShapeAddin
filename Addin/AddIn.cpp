@@ -73,24 +73,9 @@ STDAPI DllInstall(BOOL bInstall, LPCWSTR pszCmdLine)
 BEGIN_OBJECT_MAP(ObjectMap)
 END_OBJECT_MAP()
 
-BOOL CPhoenixApp::InitInstance()
+// DLL Entry Point
+extern "C" BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	// Initialize COM stuff
-	if (FAILED(_Module.Init(ObjectMap, AfxGetInstanceHandle(), &LIBID_AddinLib)))
-		return FALSE;
-
-	return TRUE;
+	hInstance;
+	return _Module.DllMain(hInstance, dwReason, lpReserved, ObjectMap, &LIBID_AddinLib); 
 }
-
-int CPhoenixApp::ExitInstance() 
-{
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	_Module.Term();
-
-	return CWinApp::ExitInstance();
-}
-
-CPhoenixApp theApp;

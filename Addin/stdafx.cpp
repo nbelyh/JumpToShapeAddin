@@ -22,5 +22,4 @@
 
 #endif
 
-
 #include "import/vislib.tli"

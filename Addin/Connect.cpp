@@ -264,7 +264,22 @@ struct CVisioConnect::Impl
 		m_buttons.RemoveAll();
 	}
 
-	static bool FindItem(HWND hwnd_tree, HTREEITEM root, LPCWSTR name)
+	static Visio::IVWindowPtr GetExplorerWindow(Visio::IVWindowPtr window)
+	{
+		using namespace Visio;
+
+		switch (window->SubType)
+		{
+		case visPageWin:
+            return window->GetWindows()->GetItemFromID(visWinIDDrawingExplorer);
+		case visMasterWin:
+			return window->GetWindows()->GetItemFromID(visWinIDMasterExplorer);
+		default:
+			return nullptr;
+		}
+	}
+
+	static HTREEITEM FindItem(HWND hwnd_tree, HTREEITEM root, LPCWSTR name)
 	{
 		TVITEM item;
 
@@ -280,7 +295,7 @@ struct CVisioConnect::Impl
 			{
 				TreeView_Select(hwnd_tree, root, TVGN_CARET);
 				TreeView_EnsureVisible(hwnd_tree, root);
-				return true;
+				return root;
 			}
 		}
 
@@ -289,15 +304,16 @@ struct CVisioConnect::Impl
 		HTREEITEM child = TreeView_GetChild(hwnd_tree, root);
 		while (child)
 		{
-			if (FindItem(hwnd_tree, child, name))
-				return true;
+			HTREEITEM found = FindItem(hwnd_tree, child, name);
+			if (found)
+				return found;
 
 			child = TreeView_GetNextSibling(hwnd_tree, child);
 		}
 
 		TreeView_Expand(hwnd_tree, root, TVE_COLLAPSE);
 
-		return false;
+		return NULL;
 	}
 
 	static HRESULT JumpToShape(Visio::IVApplicationPtr app)
@@ -306,22 +322,37 @@ struct CVisioConnect::Impl
 
 		IVWindowPtr window = app->ActiveWindow;
 
-		IVWindowPtr drawin_explorer_window = window->GetWindows()->GetItemFromID(visWinIDDrawingExplorer);
-		drawin_explorer_window->Visible = VARIANT_TRUE;
+		IVWindowPtr explorer_window = GetExplorerWindow(window);
+
+		if (explorer_window == nullptr)
+			return S_FALSE;
+
+		explorer_window->Visible = VARIANT_TRUE;
 
 		IVSelectionPtr selection = window->Selection;
-		if (selection->Count >= 1)
-		{
-			IVShapePtr shape = selection->GetItem(1L);
+		selection->IterationMode = 0;
+		IVShapePtr shape = selection->PrimaryItem;
 
-			HWND hwnd = (HWND) drawin_explorer_window->GetWindowHandle32();
-			LPCWSTR shape_name = shape->Name;
+		if (shape != nullptr)
+		{
+			HWND hwnd = (HWND)explorer_window->GetWindowHandle32();
+
+			CAtlArray<CString> node_names;
+			for (IVShapePtr currentShape = shape; currentShape != nullptr; currentShape = currentShape->Parent)
+				node_names.InsertAt(0, currentShape->Name);
+
+			if (shape->ContainingPage != nullptr)
+				node_names.InsertAt(0, shape->ContainingPage->Name);
 
 			HWND hwnd_tree = GetWindow(hwnd, GW_CHILD);
 
 			SendMessage(hwnd_tree, WM_SETREDRAW, 0, 0);
 
-			if (FindItem(hwnd_tree, TreeView_GetRoot(hwnd_tree), shape_name))
+			HTREEITEM root = TreeView_GetRoot(hwnd_tree);
+			for (size_t i = 0; i < node_names.GetCount(); ++i)
+				root = FindItem(hwnd_tree, root, node_names[i]);
+
+			if (root)
 				SetFocus(hwnd_tree);
 
 			SendMessage(hwnd_tree, WM_SETREDRAW, 1, 0);

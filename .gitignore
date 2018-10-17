@@ -11,3 +11,5 @@ obj
 *.ncb
 ship.bat
 .vs
+/ship
+/Addin.VC.db

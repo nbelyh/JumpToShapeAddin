@@ -281,37 +281,42 @@ struct CVisioConnect::Impl
 
 	static HTREEITEM FindItem(HWND hwnd_tree, HTREEITEM root, LPCWSTR name)
 	{
-		TVITEM item;
+		const int ImageType_Folder = 0;
+		const int ImageType_Extras = 10;
 
-		WCHAR item_name[1024];
-		item.hItem = root;
-		item.mask = TVIF_TEXT;
-		item.pszText = item_name;
-		item.cchTextMax = 1024;
+		CAtlArray<HTREEITEM> queue;
+		queue.Add(root);
+		size_t pos = 0;
 
-		if (TreeView_GetItem(hwnd_tree, &item))
+		while (pos < queue.GetCount())
 		{
-			if (!StrCmp(item_name, name))
+			HTREEITEM first = queue[pos++];
+
+			TreeView_Expand(hwnd_tree, first, TVE_EXPAND);
+
+			HTREEITEM child = TreeView_GetChild(hwnd_tree, first);
+			while (child)
 			{
-				TreeView_Select(hwnd_tree, root, TVGN_CARET);
-				TreeView_EnsureVisible(hwnd_tree, root);
-				return root;
+				TVITEM item;
+
+				WCHAR item_name[1024] = L"";
+				item.hItem = child;
+				item.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_CHILDREN;
+				item.pszText = item_name;
+				item.cchTextMax = 1024;
+
+				if (TreeView_GetItem(hwnd_tree, &item))
+				{
+					if (!StrCmp(item_name, name) && item.iImage != ImageType_Folder)
+						return child;
+
+					if (item.cChildren > 0 && item.iImage < ImageType_Extras)
+						queue.Add(child);
+				}
+
+				child = TreeView_GetNextSibling(hwnd_tree, child);
 			}
 		}
-
-		TreeView_Expand(hwnd_tree, root, TVE_EXPAND);
-
-		HTREEITEM child = TreeView_GetChild(hwnd_tree, root);
-		while (child)
-		{
-			HTREEITEM found = FindItem(hwnd_tree, child, name);
-			if (found)
-				return found;
-
-			child = TreeView_GetNextSibling(hwnd_tree, child);
-		}
-
-		TreeView_Expand(hwnd_tree, root, TVE_COLLAPSE);
 
 		return NULL;
 	}
@@ -335,14 +340,32 @@ struct CVisioConnect::Impl
 
 		if (shape != nullptr)
 		{
-			HWND hwnd = (HWND)explorer_window->GetWindowHandle32();
+			HWND hwnd = (HWND)(LONG_PTR)explorer_window->GetWindowHandle32();
 
 			CAtlArray<CString> node_names;
 			for (IVShapePtr currentShape = shape; currentShape != nullptr; currentShape = currentShape->Parent)
 				node_names.InsertAt(0, currentShape->Name);
 
-			if (shape->ContainingPage != nullptr)
-				node_names.InsertAt(0, shape->ContainingPage->Name);
+			// drawing explorer
+			IVPagePtr containing_page = shape->ContainingPage;
+			if (containing_page != nullptr)
+			{
+				CString page_name = containing_page->Name;
+				node_names.InsertAt(0, page_name);
+			}
+
+			// Master explorer
+			IVMasterPtr containing_master = shape->ContainingMaster;
+			if (containing_master != nullptr)
+			{
+				// The master explorer window shows original name
+				IVMasterPtr original_master = containing_master->Original;
+				CString master_name = original_master != nullptr
+					? original_master->Name 
+					: containing_master->Name;
+
+				node_names.InsertAt(0, master_name);
+			}
 
 			HWND hwnd_tree = GetWindow(hwnd, GW_CHILD);
 
@@ -353,7 +376,11 @@ struct CVisioConnect::Impl
 				root = FindItem(hwnd_tree, root, node_names[i]);
 
 			if (root)
+			{
+				TreeView_Select(hwnd_tree, root, TVGN_CARET);
+				TreeView_EnsureVisible(hwnd_tree, root);
 				SetFocus(hwnd_tree);
+			}
 
 			SendMessage(hwnd_tree, WM_SETREDRAW, 1, 0);
 		}

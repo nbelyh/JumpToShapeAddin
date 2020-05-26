@@ -106,6 +106,7 @@ stages:
       inputs:
         contents: '**/Release/*.msi'
         targetFolder: '$(Build.ArtifactStagingDirectory)'
+        flattenFolders: true
     - task: PublishBuildArtifacts@1
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'

@@ -157,103 +157,73 @@ struct CVisioConnect::Impl
 	/**-----------------------------------------------------------------------------
 		Initializes menu or toolbar item's caption, icon, and command id.
 	------------------------------------------------------------------------------*/
-	void InitializeItem(Office::CommandBarControlPtr item, UINT command_id)
+
+	void FillMenuItem(Office::CommandBarControlsPtr menu_items, UINT command_id)
 	{
+		// create new menu item.
+		Office::CommandBarControlPtr menu_item_obj;
+		menu_items->Add(
+			variant_t(long(Office::msoControlButton)),
+			vtMissing,
+			vtMissing,
+			variant_t(long(1)),
+			variant_t(true),
+			&menu_item_obj);
+
+		// set item caption
 		CString caption;
 		caption.LoadString(command_id);
-	    item->put_Caption(bstr_t(caption));
+		menu_item_obj->put_Caption(bstr_t(caption));
 
-	    // The target action is marker add-on, since we work using MarkerEvent.
-	    // For more information about that, see the article in MSDN: 
-	    // http://msdn.microsoft.com/en-us/library/aa140366.aspx
+		// The target action is marker add-on, since we work using MarkerEvent.
+		// For more information about that, see the article in MSDN: 
+		// http://msdn.microsoft.com/en-us/library/aa140366.aspx
 
 		CString parameter;
 		parameter.Format(L"%d", command_id);
-	    item->put_Parameter(bstr_t(parameter));
+		menu_item_obj->put_Parameter(bstr_t(parameter));
 
 		// Set unique tag, so that the command is not lost
 		CString tag;
 		tag.Format(L"%s_%d", ADDON_NAME, command_id);
-		item->put_Tag(bstr_t(tag));
+		menu_item_obj->put_Tag(bstr_t(tag));
 
-		m_buttons.Add(new ClickEventRedirector(item));
+		m_buttons.Add(new ClickEventRedirector(menu_item_obj));
 	}
 
-	void FillMenuItems(long position, Office::CommandBarControlsPtr menu_items, HMENU popup_menu)
+	void CleanupMenuItem(Office::_CommandBarsPtr cbs, UINT command_id)
 	{
-		// For each items in the menu,
-		bool begin_group = false;
-		for (int i = 0; i < GetMenuItemCount(popup_menu); ++i)
+		CString tag;
+		tag.Format(L"%s_%d", ADDON_NAME, command_id);
+
+		Office::CommandBarControlsPtr controls;
+		if (SUCCEEDED(cbs->FindControls(vtMissing, vtMissing, variant_t(tag), vtMissing, &controls)))
 		{
-			HMENU sub_menu = GetSubMenu(popup_menu, i);
-
-			// set item caption
-			WCHAR item_caption[1024] = L"";
-			GetMenuString(popup_menu, i, item_caption, 1024, MF_BYPOSITION);
-
-			// if this item is actually a separator then process next item
-			if (lstrlen(item_caption) == 0)
+			int count = 0;
+			controls->get_Count(&count);
+			for (int i = count; i > 0; --i)
 			{
-				begin_group = true;
-				continue;
-			}
-
-			// create new menu item.
-			Office::CommandBarControlPtr menu_item_obj;
-			menu_items->Add(
-				variant_t(sub_menu ? long(Office::msoControlPopup) : long(Office::msoControlButton)), 
-				vtMissing, 
-				vtMissing, 
-				position < 0 ? vtMissing : variant_t(position), 
-				variant_t(true),
-				&menu_item_obj);
-
-			if (position > 0)
-				++position;
-
-			// obtain command id from menu
-			UINT command_id = GetMenuItemID(popup_menu, i);
-
-			// normal command; set up visio menu item
-			InitializeItem(menu_item_obj, command_id);
-
-			// if current item is first in a group, start new group
-			if (begin_group)
-			{
-				menu_item_obj->put_BeginGroup(VARIANT_TRUE);
-				begin_group = false;
-			}
-
-			// if this command has sub-menu
-			if (sub_menu)
-			{
-				Office::CommandBarPopupPtr popup_menu_item_obj = menu_item_obj;
-
-				Office::CommandBarControlsPtr controls;
-				popup_menu_item_obj->get_Controls(&controls);
-
-				FillMenuItems(-1, controls, sub_menu);
+				Office::CommandBarControlPtr control;
+				if (SUCCEEDED(controls->get_Item(variant_t(long(i)), &control)))
+				{
+					control->Delete();
+				}
 			}
 		}
-	}
-
-	void FillMenu(long position, Office::CommandBarControlsPtr cbs, UINT menu_id)
-	{
-		HMENU menu = LoadMenu(_Module.GetResourceInstance(), MAKEINTRESOURCE(menu_id));
-
-		FillMenuItems(position, cbs, GetSubMenu(menu, 0));
 	}
 
 	void CreateCommandBarsMenu(Visio::IVApplicationPtr app)
 	{
 		Office::_CommandBarsPtr cbs = app->CommandBars;
 
+		CleanupMenuItem(cbs, IDS_JumpToShape);
+
 		Office::CommandBarPtr drawing_context_popup = GetDrawingContextMenu(cbs);
 
 		Office::CommandBarControlsPtr controls;
 		drawing_context_popup->get_Controls(&controls);
 
-		FillMenu(1L, controls, IDR_MENU);
+		FillMenuItem(controls, IDS_JumpToShape);
 	}
 
 	void DestroyCommandBarsMenu()

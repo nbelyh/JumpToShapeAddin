@@ -102,16 +102,14 @@ stages:
               &$signtool sign /n "Nikolay Belykh" /v /fd sha256 /tr $timestampUrl /td sha256 /d "Visio JumpToShape Addin" /du "https://unmanagedvisio.com" $file.FullName
             }
           }
-          
-    - task: CopyPublishBuildArtifacts@1
-      displayName: Publish artifacts
+    - task: CopyFiles@2
       inputs:
-        Contents: |
-          x86/Release/*.msi
-          x64/Release/*.msi
-        ArtifactName: 'setup'
-        ArtifactType: 'Container'
-
+        contents: '**/Release/*.msi'
+        targetFolder: '$(Build.ArtifactStagingDirectory)'
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)'
+        artifactName: 'setup'
 
 - stage: Deploy
   pool:

@@ -1,3 +1,4 @@
+name: $(Version).$(DayOfYear)$(Rev:.r)
 
 trigger:
 - master

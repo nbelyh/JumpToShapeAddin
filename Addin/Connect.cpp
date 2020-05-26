@@ -197,14 +197,14 @@ struct CVisioConnect::Impl
 		tag.Format(L"%s_%d", ADDON_NAME, command_id);
 
 		Office::CommandBarControlsPtr controls;
-		if (SUCCEEDED(cbs->FindControls(vtMissing, vtMissing, variant_t(tag), vtMissing, &controls)))
+		if (SUCCEEDED(cbs->FindControls(vtMissing, vtMissing, variant_t(tag), vtMissing, &controls)) && controls != nullptr)
 		{
 			int count = 0;
 			controls->get_Count(&count);
 			for (int i = count; i > 0; --i)
 			{
 				Office::CommandBarControlPtr control;
-				if (SUCCEEDED(controls->get_Item(variant_t(long(i)), &control)))
+				if (SUCCEEDED(controls->get_Item(variant_t(long(i)), &control)) && control != nullptr)
 				{
 					control->Delete();
 				}

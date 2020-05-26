@@ -5,7 +5,6 @@
 #define IDR_ADDIN                       101
 #define IDR_RIBBON                      102
 #define IDS_JumpToShape                 103
-#define IDR_MENU                        205
 #define ID__32768                       32768
 
 // Next default values for new objects

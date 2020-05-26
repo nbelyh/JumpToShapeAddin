@@ -2,5 +2,8 @@ JumpToShapeAddin
 ================
 
 Visio plugin adds which adds a single command to Visio "Jump to shape in Drawing Explorer"
+With this item, you can easily select the highlighted shape in the Visio drawing explorer.
 
-[![app-veyor](https://ci.appveyor.com/api/projects/status/677ogl6pw4xlb0ga)](https://ci.appveyor.com/project/nbelyh/jumptoshapeaddin)
+[Watch video on the add-in's page](https://unmanagedvisio.com/products/jump-to-shape/)
+
+![front](README.png?raw=true "Title")
